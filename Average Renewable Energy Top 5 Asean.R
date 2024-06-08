@@ -46,21 +46,55 @@ data_for_bar <- average_renewable_energy_melted %>%
 
 #Visualize in Geom Bar
 ggplot(data = data_for_bar %>% filter(renamed_labels != "Nuclear"), 
-       aes(x = country, y = value, fill = renamed_labels)) +
+       aes(x = country, y = value, 
+           fill = renamed_labels, label = round(value))) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(title = "Average Renewable Energy Data in ASEAN Countries",
        x = "Country",
        y = "Kilo Watt Hour",
        fill = "Energy Type") + 
-    scale_x_discrete(labels = energy_type)
-
-#Visualize in Tree Map
-ggplot(data = average_renewable_energy_melted, aes(area = value, fill = variable, label = Country)) +
-  geom_treemap() +
-  labs(title = "Average Renewable Energy Data in ASEAN Countries",
-       fill = "Energy Type") +
-  scale_fill_discrete(labels = energy_type) +
-  theme_minimal()
+    scale_x_discrete(labels = energy_type) +
+  geom_text(position = position_dodge(width = 0.9),
+            size = 3,
+            vjust = -0.5, colour = "black")
 
 
+#Visualize in Sunburst Chart#### FAIL
+data <- data.frame(
+  country = c("Indonesia", "Malaysia", "Philippines", "Thailand", "Vietnam"),
+  energy_type = c("Biofuel", "Gas", "Hydro", "Solar", "Wind"),
+  Value = c("data_for_bar")
+)
 
+#Calculate angles
+data_for_bar <- data_for_bar %>%
+  group_by(country) %>%
+  mutate(country_total = sum(value)) %>%
+  ungroup() %>%
+  arrange(country, renamed_labels) %>%
+  mutate(
+    fraction = value / sum(value),
+    ymax = cumsum(fraction),
+    ymin = lag(ymax, default = 0),
+    country_ymax = cumsum(country_total / sum(country_total)),
+    country_ymin = lag(country_ymax,default = 0)
+  )
+
+###Visualize in Sunburst chart###
+ggplot(data_for_bar, aes(fill = renamed_labels)) +
+  geom_rect(
+    aes(xmin = country_ymin, xmax = country_ymax, ymin = ymin, ymax = ymax),
+    colour="white"
+  ) +
+  geom_rect(
+    aes(xmin = country_ymin, xmax = country_ymax, ymin = 0, ymax = 1),
+    fill = NA, colour = "white", size = 0.5
+  ) +
+  scale_fill_brewer(palette= "Set3") +
+  coord_polar(theta="y") +
+  labs(title = "Average Renewable Energy by Country and Type in ASEAN") +
+  theme_void() +
+  theme(legend.position="right")
+
+
+  
